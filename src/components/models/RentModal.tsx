@@ -1,13 +1,10 @@
 "use client";
-
 import useRentModal from "@/hook/useRentModal";
-import axios from "axios";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "react-toastify";
-
 import Heading from "../Heading";
 import CategoryInput from "@/components/inputs/CategoryInput";
 import Counter from "@/components/inputs/Counter";
@@ -16,6 +13,7 @@ import ImageUpload from "@/components/inputs/ImageUpload";
 import Input from "@/components/inputs/Input";
 import { categories } from "@/components/navbar/Categories";
 import Modal from "./Modal";
+import { createListing } from "@/components/actions/listing";
 
 type Props = {};
 
@@ -62,17 +60,14 @@ function RentModal({}: Props) {
   const bathroomCount = watch("bathroomCount");
   const imageSrc = watch("imageSrc");
 
-  const Map = useMemo(
-    () =>
-      dynamic(() => import("../Map"), {
-        ssr: false,
-      }),
-    [location]
-  );
+  // Keep this useMemo as it's for dynamic imports, not for performance optimization
+  const Map = dynamic(() => import("../Map"), {
+    ssr: false,
+  });
 
   const setCustomValue = (id: string, value: any) => {
     setValue(id, value, {
-      shouldValidate: true,
+      shouldValidate: false,
       shouldDirty: true,
       shouldTouch: true,
     });
@@ -86,45 +81,34 @@ function RentModal({}: Props) {
     setStep((value) => value + 1);
   };
 
-  const onSubmit: SubmitHandler<FieldValues> = (data) => {
+  const onSubmit: SubmitHandler<FieldValues> = async (data) => {
     if (step !== STEPS.PRICE) {
       return onNext();
     }
 
     setIsLoading(true);
 
-    axios
-      .post("/api/listings", data)
-      .then(() => {
+    try {
+      const result = await createListing(data);
+      
+      if (result.success) {
         toast.success("Listing Created!");
         router.refresh();
         reset();
         setStep(STEPS.CATEGORY);
         rentModel.onClose();
-      })
-      .catch(() => {
-        toast.error("Something Went Wrong");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      } else {
+        toast.error(result.error || "Something went wrong");
+      }
+    } catch (error) {
+      toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const actionLabel = useMemo(() => {
-    if (step === STEPS.PRICE) {
-      return "Create";
-    }
-
-    return "Next";
-  }, [step]);
-
-  const secondActionLabel = useMemo(() => {
-    if (step === STEPS.CATEGORY) {
-      return undefined;
-    }
-
-    return "Back";
-  }, [step]);
+  const actionLabel = step === STEPS.PRICE ? "Create" : "Next";
+  const secondaryActionLabel = step === STEPS.CATEGORY ? undefined : "Back";
 
   let bodyContent = (
     <div className="flex flex-col gap-8">
@@ -237,7 +221,7 @@ function RentModal({}: Props) {
     );
   }
 
-  if (step == STEPS.PRICE) {
+  if (step === STEPS.PRICE) {
     bodyContent = (
       <div className="flex flex-col gap-8">
         <Heading
@@ -265,7 +249,7 @@ function RentModal({}: Props) {
       title="Airbnb your home!"
       actionLabel={actionLabel}
       onSubmit={handleSubmit(onSubmit)}
-      secondaryActionLabel={secondActionLabel}
+      secondaryActionLabel={secondaryActionLabel}
       secondaryAction={step === STEPS.CATEGORY ? undefined : onBack}
       onClose={rentModel.onClose}
       body={bodyContent}
