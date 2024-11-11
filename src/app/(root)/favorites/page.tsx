@@ -1,8 +1,8 @@
 import ClientOnly from "@/components/ClientOnly";
 import EmptyState from "@/components/EmptyState";
 import React from "react";
-import getCurrentUser from "../actions/getCurrentUser";
-import getFavoriteListings from "../actions/getFavoriteListings";
+import getCurrentUser from "@/components/actions/getCurrentUser";
+import getFavoriteListings from "@/components/actions/getFavoriteListings";
 import FavoritesClient from "./FavoritesClient";
 
 type Props = {};

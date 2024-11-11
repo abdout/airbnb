@@ -15,8 +15,6 @@ import { categories } from "@/components/navbar/Categories";
 import Modal from "./Modal";
 import { createListing } from "@/components/actions/listing";
 
-type Props = {};
-
 enum STEPS {
   CATEGORY = 0,
   LOCATION = 1,
@@ -26,9 +24,9 @@ enum STEPS {
   PRICE = 5,
 }
 
-function RentModal({}: Props) {
+function RentModal() {
   const router = useRouter();
-  const rentModel = useRentModal();
+  const rentModal = useRentModal();
   const [step, setStep] = useState(STEPS.CATEGORY);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,7 +45,7 @@ function RentModal({}: Props) {
       roomCount: 1,
       bathroomCount: 1,
       imageSrc: "",
-      price: 1,
+      price: 0,
       title: "",
       description: "",
     },
@@ -60,47 +58,46 @@ function RentModal({}: Props) {
   const bathroomCount = watch("bathroomCount");
   const imageSrc = watch("imageSrc");
 
-  // Keep this useMemo as it's for dynamic imports, not for performance optimization
-  const Map = dynamic(() => import("../Map"), {
-    ssr: false,
-  });
+  const Map = dynamic(() => import("../Map"), { ssr: false });
 
   const setCustomValue = (id: string, value: any) => {
-    setValue(id, value, {
-      shouldValidate: false,
-      shouldDirty: true,
-      shouldTouch: true,
-    });
+    setValue(id, value, { shouldValidate: false });
   };
 
-  const onBack = () => {
-    setStep((value) => value - 1);
-  };
-
-  const onNext = () => {
-    setStep((value) => value + 1);
-  };
+  const onBack = () => setStep((prev) => prev - 1);
+  const onNext = () => setStep((prev) => prev + 1);
 
   const onSubmit: SubmitHandler<FieldValues> = async (data) => {
-    if (step !== STEPS.PRICE) {
-      return onNext();
-    }
+    if (step !== STEPS.PRICE) return onNext();
 
     setIsLoading(true);
 
     try {
-      const result = await createListing(data);
+      const payload = {
+        ...data,
+        imageSrc: data.imageSrc || "",
+        category: data.category || "Uncategorized",
+        location: data.location || null,
+        title: data.title || "No Title",
+        description: data.description || "No Description",
+        price: data.price || 0,
+      };
+
+      console.log("Submitting Data:", payload);
+
+      const result = await createListing(payload);
       
       if (result.success) {
         toast.success("Listing Created!");
         router.refresh();
         reset();
         setStep(STEPS.CATEGORY);
-        rentModel.onClose();
+        rentModal.onClose();
       } else {
         toast.error(result.error || "Something went wrong");
       }
     } catch (error) {
+      console.error("Error creating listing:", error);
       toast.error("Something went wrong");
     } finally {
       setIsLoading(false);
@@ -112,10 +109,7 @@ function RentModal({}: Props) {
 
   let bodyContent = (
     <div className="flex flex-col gap-8">
-      <Heading
-        title="Which of these best describes your place?"
-        subtitle="Pick a category"
-      />
+      <Heading title="Which of these best describes your place?" subtitle="Pick a category" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[50vh] overflow-y-auto scrollbar-thin scrollbar-thumb-[#FF5A5F]">
         {categories.map((item, index) => (
           <div key={index} className="col-span-1">
@@ -134,14 +128,8 @@ function RentModal({}: Props) {
   if (step === STEPS.LOCATION) {
     bodyContent = (
       <div className="flex flex-col gap-8">
-        <Heading
-          title="Where is your place located?"
-          subtitle="Help guests find you!"
-        />
-        <CountrySelect
-          value={location}
-          onChange={(value) => setCustomValue("location", value)}
-        />
+        <Heading title="Where is your place located?" subtitle="Help guests find you!" />
+        <CountrySelect value={location} onChange={(value) => setCustomValue("location", value)} />
         <Map center={location?.latlng} />
       </div>
     );
@@ -150,30 +138,12 @@ function RentModal({}: Props) {
   if (step === STEPS.INFO) {
     bodyContent = (
       <div className="flex flex-col gap-8">
-        <Heading
-          title="Share some basics about your place"
-          subtitle="What amenities do you have?"
-        />
-        <Counter
-          title="Guests"
-          subtitle="How many guest do you allow?"
-          value={guestCount}
-          onChange={(value) => setCustomValue("guestCount", value)}
-        />
+        <Heading title="Share some basics about your place" subtitle="What amenities do you have?" />
+        <Counter title="Guests" subtitle="How many guests do you allow?" value={guestCount} onChange={(value) => setCustomValue("guestCount", value)} />
         <hr />
-        <Counter
-          title="Rooms"
-          subtitle="How many rooms do you have?"
-          value={roomCount}
-          onChange={(value) => setCustomValue("roomCount", value)}
-        />
+        <Counter title="Rooms" subtitle="How many rooms do you have?" value={roomCount} onChange={(value) => setCustomValue("roomCount", value)} />
         <hr />
-        <Counter
-          title="Bathrooms"
-          subtitle="How many Bathrooms do you have?"
-          value={bathroomCount}
-          onChange={(value) => setCustomValue("bathroomCount", value)}
-        />
+        <Counter title="Bathrooms" subtitle="How many bathrooms do you have?" value={bathroomCount} onChange={(value) => setCustomValue("bathroomCount", value)} />
       </div>
     );
   }
@@ -181,14 +151,8 @@ function RentModal({}: Props) {
   if (step === STEPS.IMAGES) {
     bodyContent = (
       <div className="flex flex-col gap-8">
-        <Heading
-          title="Add a photo of your place"
-          subtitle="Show guests what your place looks like!"
-        />
-        <ImageUpload
-          onChange={(value) => setCustomValue("imageSrc", value)}
-          value={imageSrc}
-        />
+        <Heading title="Add a photo of your place" subtitle="Show guests what your place looks like!" />
+        <ImageUpload onChange={(value) => setCustomValue("imageSrc", value)} value={imageSrc} />
       </div>
     );
   }
@@ -196,27 +160,10 @@ function RentModal({}: Props) {
   if (step === STEPS.DESCRIPTION) {
     bodyContent = (
       <div className="flex flex-col gap-8">
-        <Heading
-          title="Now, set your price"
-          subtitle="How much do you charge per night?"
-        />
-        <Input
-          id="title"
-          label="Title"
-          disabled={isLoading}
-          register={register}
-          errors={errors}
-          required
-        />
+        <Heading title="Describe your place" subtitle="Let guests know what makes your place special!" />
+        <Input id="title" label="Title" disabled={isLoading} register={register} errors={errors} />
         <hr />
-        <Input
-          id="description"
-          label="Description"
-          disabled={isLoading}
-          register={register}
-          errors={errors}
-          required
-        />
+        <Input id="description" label="Description" disabled={isLoading} register={register} errors={errors} />
       </div>
     );
   }
@@ -224,20 +171,8 @@ function RentModal({}: Props) {
   if (step === STEPS.PRICE) {
     bodyContent = (
       <div className="flex flex-col gap-8">
-        <Heading
-          title="Now, set your price"
-          subtitle="How much do you charge per night?"
-        />
-        <Input
-          id="price"
-          label="Price"
-          formatPrice
-          type="number"
-          disabled={isLoading}
-          register={register}
-          errors={errors}
-          required
-        />
+        <Heading title="Set your price" subtitle="How much do you charge per night?" />
+        <Input id="price" label="Price" formatPrice type="number" disabled={isLoading} register={register} errors={errors} />
       </div>
     );
   }
@@ -245,13 +180,13 @@ function RentModal({}: Props) {
   return (
     <Modal
       disabled={isLoading}
-      isOpen={rentModel.isOpen}
+      isOpen={rentModal.isOpen}
       title="Airbnb your home!"
       actionLabel={actionLabel}
       onSubmit={handleSubmit(onSubmit)}
       secondaryActionLabel={secondaryActionLabel}
       secondaryAction={step === STEPS.CATEGORY ? undefined : onBack}
-      onClose={rentModel.onClose}
+      onClose={rentModal.onClose}
       body={bodyContent}
     />
   );

@@ -26,11 +26,11 @@ export async function createListing(data: any) {
     } = data;
 
     // Validate required fields
-    Object.keys(data).forEach((value: any) => {
-      if (!data[value]) {
-        throw new Error('Missing required fields');
-      }
-    });
+    // Object.keys(data).forEach((value: any) => {
+    //   if (!data[value]) {
+    //     throw new Error('Missing required fields');
+    //   }
+    // });
 
     const listing = await db.listing.create({
       data: {
