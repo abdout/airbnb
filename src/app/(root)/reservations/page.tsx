@@ -1,8 +1,8 @@
 import ClientOnly from "@/components/ClientOnly";
 import EmptyState from "@/components/EmptyState";
 import React from "react";
-import getCurrentUser from "../actions/getCurrentUser";
-import getReservation from "../actions/getReservations";
+import getCurrentUser from "@/components/actions/getCurrentUser";
+import getReservation from "@/components/actions/getReservations";
 import ReservationsClient from "./ReservationsClient";
 
 type Props = {};
